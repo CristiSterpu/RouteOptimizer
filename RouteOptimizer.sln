@@ -1,0 +1,40 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36310.24
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RouteOptimizer.Core", "RouteOptimizer.Core\RouteOptimizer.Core.csproj", "{383A8465-2199-4045-978A-EFB58363BEF2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RouteOptimizer.Infrastructure", "RouteOptimizer.Infrastructure\RouteOptimizer.Infrastructure.csproj", "{8D0F448D-4A4E-489F-A6B2-46E77163BA9B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{383A8465-2199-4045-978A-EFB58363BEF2} = {383A8465-2199-4045-978A-EFB58363BEF2}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RouteOptimizer.API", "RouteOptimizer.API\RouteOptimizer.API.csproj", "{6253CD90-C60A-28F6-0011-EBFDA981020D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{383A8465-2199-4045-978A-EFB58363BEF2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{383A8465-2199-4045-978A-EFB58363BEF2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{383A8465-2199-4045-978A-EFB58363BEF2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{383A8465-2199-4045-978A-EFB58363BEF2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8D0F448D-4A4E-489F-A6B2-46E77163BA9B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8D0F448D-4A4E-489F-A6B2-46E77163BA9B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8D0F448D-4A4E-489F-A6B2-46E77163BA9B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8D0F448D-4A4E-489F-A6B2-46E77163BA9B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6253CD90-C60A-28F6-0011-EBFDA981020D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6253CD90-C60A-28F6-0011-EBFDA981020D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6253CD90-C60A-28F6-0011-EBFDA981020D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6253CD90-C60A-28F6-0011-EBFDA981020D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {2AEBD96C-1AE7-48B6-B089-F7185F6A39E4}
+	EndGlobalSection
+EndGlobal
