@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { Profiler } from 'react';
+import { onRenderCallback } from '../../utils/performance';
 import { useNavigate } from 'react-router-dom';
 import {
     Box,
@@ -308,6 +310,7 @@ const TravellerDashboard: React.FC<TravellerDashboardProps> = ({ showNotificatio
     }
 
     return (
+        <Profiler id="TravellerDashboard" onRender={onRenderCallback}>
         <Box sx={{ flexGrow: 1, bgcolor: 'background.default', minHeight: '100vh' }}>
             <Navbar />
 
@@ -680,6 +683,7 @@ const TravellerDashboard: React.FC<TravellerDashboardProps> = ({ showNotificatio
                 </Grid>
             </Box>
         </Box>
+        </Profiler>
     );
 };
 

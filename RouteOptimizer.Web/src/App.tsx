@@ -13,6 +13,7 @@ import Analytics from './pages/manager/Analytics';
 import AIRecommendations from './pages/manager/AIRecommendations';
 import LoadingScreen from './components/common/LoadingScreen';
 import {useAuth} from "@/providers/KeycloakProvider.tsx";
+import { PerformanceMonitor } from './utils/performance';
 
 // Create theme
 const theme = createTheme({
@@ -350,6 +351,7 @@ const App: React.FC = () => {
                     </Snackbar>
                 </div>
             </Router>
+            <PerformanceMonitor enabled={import.meta.env.DEV} />
         </ThemeProvider>
     );
 };

@@ -318,3 +318,69 @@ export interface NearbyStop {
     nextBus: Date;
     delay: number;
 }
+
+// Route Management specific types
+export interface RouteStop {
+    id: number;
+    stopId: number;
+    stopName: string;
+    location: Location;
+    sequenceNumber: number;
+    averageWaitTime: number;
+    boardingCount: number;
+    alightingCount: number;
+    distanceFromPrevious: number;
+}
+
+export interface RouteDetails extends BusRoute {
+    stops: RouteStop[];
+    startPoint: string;
+    endPoint: string;
+    numberOfStops: number;
+    operatingHours: {
+        start: string;
+        end: string;
+    };
+    status: 'active' | 'inactive' | 'maintenance';
+    averageDailyPassengers: number;
+    onTimePercentage: number;
+    capacityUtilization: number;
+    frequency: number; // minutes between buses
+    vehicleType: string;
+    estimatedTravelTime: number;
+}
+
+export interface RouteListFilters {
+    status?: 'active' | 'inactive' | 'maintenance' | 'all';
+    searchTerm?: string;
+    sortBy?: 'name' | 'passengers' | 'performance' | 'stops';
+    sortOrder?: 'asc' | 'desc';
+}
+
+export interface RouteFormData {
+    name: string;
+    code: string;
+    description: string;
+    startPoint: string;
+    endPoint: string;
+    operatingHours: {
+        start: string;
+        end: string;
+    };
+    frequency: number;
+    vehicleType: string;
+    stops: RouteStop[];
+    path: [number, number][];
+    isActive: boolean;
+}
+
+export interface BusPosition {
+    busId: number;
+    routeId: number;
+    location: Location;
+    heading: number;
+    speed: number;
+    lastUpdated: string;
+    status: 'on_time' | 'delayed' | 'ahead_of_schedule';
+    nextStopId: number;
+}
