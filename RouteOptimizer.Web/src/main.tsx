@@ -4,8 +4,6 @@ import './index.css'
 import App from './App.tsx'
 import { KeycloakProvider } from './providers/KeycloakProvider';
 
-import 'leaflet/dist/leaflet.css'
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
       <KeycloakProvider>

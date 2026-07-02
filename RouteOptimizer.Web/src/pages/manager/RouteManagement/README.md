@@ -1,349 +1,164 @@
-# Route Management Components
+# Route Management System
 
-This directory contains all components for the Routes Management feature of the RouteOptimizer application.
+A comprehensive route management interface for the Bucharest public transport system with full CRUD operations, interactive mapping, and real-time visualization.
 
-## Components Overview
+## Features
 
-### RoutesPage.tsx
-The main container component that orchestrates all route management functionality.
+### 1. Route List/Table View
+- **Comprehensive Route Information**
+  - Route code and name
+  - Start and end points
+  - Number of stops
+  - Operating hours and frequency
+  - Route status (Active, Inactive, Under Maintenance)
+  - Average daily passengers
+  - Performance metrics (on-time %, capacity utilization %)
 
-**Props**:
-- `showNotification`: Function to display notifications
+- **Advanced Filtering & Search**
+  - Search by route name, code, or description
+  - Filter by status (Active, Inactive, Under Maintenance)
+  - Pagination support
 
-**State Management**:
-- Routes list
-- Selected route for details
-- Form dialog state
-- Tab navigation state
+- **Quick Actions**
+  - View route details
+  - Edit route configuration
+  - Enable/Disable route
+  - Delete route
 
-**Key Features**:
-- Tab-based navigation between list and map views
-- Handles all CRUD operations for routes
-- Sample data for Bucharest routes
+### 2. Interactive Map View
+- **Visual Route Representation**
+  - All routes displayed on OpenStreetMap
+  - Color-coded routes by status or performance
+  - Adjustable route opacity based on selection
 
-### RouteList.tsx
-Table view component displaying all routes with filters and actions.
+- **Interactive Controls**
+  - Color mode toggle (by status or performance)
+  - Show/hide routes layer
+  - Show/hide stops layer
+  - Click routes to view details
 
-**Props**:
-- `routes`: Array of route details
-- `isLoading`: Loading state
-- `onViewDetails`: Callback for viewing route details
-- `onEdit`: Callback for editing a route
-- `onDelete`: Callback for deleting a route
-- `onToggleStatus`: Callback for toggling route active status
+- **Performance-Based Visualization**
+  - Green: ≥90% on-time performance
+  - Orange: 75-89% on-time performance
+  - Red: <75% on-time performance
 
-**Features**:
-- Search by route name, code, or location
-- Filter by status (active, inactive, maintenance)
-- Sort by multiple fields (name, passengers, performance, stops)
-- Color-coded performance indicators
-- Pagination with configurable rows per page
+- **Real-time Bus Positions**
+  - Live bus location markers (when available)
+  - Animated pulse effect for active buses
 
-### RouteMapView.tsx
-Map visualization component showing routes and real-time bus positions.
+### 3. Route Details Panel
+Comprehensive information displayed when a route is selected:
 
-**Props**:
-- `routes`: Array of route details
-- `onRouteClick`: Callback when a route is clicked
+- **Route Overview**
+  - Complete route information
+  - Status and operating parameters
+  - Performance metrics with visual indicators
 
-**Features**:
-- Toggle layers (routes, stops, real-time buses)
-- Route selection checkboxes
-- Color-coded routes
-- Simulated real-time bus positions (updates every 5s)
-- Legend
-- Ready for Leaflet integration
+- **Stop-by-Stop Information**
+  - Ordered list of all stops
+  - Stop name and location coordinates
+  - Accessibility indicators
+  - Zone type classification
+  - Average wait times
+  - Passenger boarding/alighting statistics
+  - Distance between consecutive stops
 
-**Note**: Currently uses a simulated map. To enable full map functionality:
-```bash
-npm install leaflet react-leaflet @types/leaflet
-```
+### 4. Route Creation/Editing
+Interactive route builder with:
 
-### RouteDetailsPanel.tsx
-Drawer component showing comprehensive route information.
+- **Basic Information**
+  - Route code and name
+  - Description
+  - Status selection
+  - Operating hours (start/end times)
+  - Service frequency
 
-**Props**:
-- `route`: Route details object or null
-- `open`: Boolean to control drawer visibility
-- `onClose`: Callback to close the drawer
-- `onEdit`: Callback to edit the route
+- **Route Configuration**
+  - Vehicle type selection
+  - Estimated travel time
+  - Operational cost tracking
 
-**Displays**:
-- Basic route information
-- Operating hours and frequency
-- Performance metrics (passengers, on-time %, capacity)
-- Detailed stops list with statistics
-- Quick actions (Edit, Close)
+- **Interactive Stop Management**
+  - Add stops from searchable dropdown
+  - Reorder stops with up/down controls
+  - Remove stops
+  - Automatic route path generation
+  - Minimum 2 stops required
+  - Auto-calculation of start/end points
 
-### RouteFormDialog.tsx
-Multi-step wizard dialog for creating and editing routes.
+## Components
 
-**Props**:
-- `open`: Boolean to control dialog visibility
+### RouteList
+Table view component with filtering, search, and pagination.
+
+**Props:**
+- `routes`: Array of bus routes
+- `onSelectRoute`: Callback when route is selected
+- `onEditRoute`: Callback to edit route
+- `onDeleteRoute`: Callback to delete route
+- `onToggleStatus`: Callback to enable/disable route
+- `onAddRoute`: Callback to add new route
+- `selectedRouteId`: Currently selected route ID
+
+### RouteMapView
+Interactive map visualization with route overlays.
+
+**Props:**
+- `routes`: Array of bus routes to display
+- `selectedRoute`: Currently selected route
+- `onSelectRoute`: Callback when route is clicked
+
+### RouteDetailsPanel
+Detailed information panel for selected route.
+
+**Props:**
+- `route`: Selected route object (or null)
+- `onClose`: Callback to close the panel
+
+### RouteFormDialog
+Modal dialog for creating/editing routes.
+
+**Props:**
+- `open`: Dialog visibility state
 - `route`: Route to edit (null for new route)
-- `onClose`: Callback to close the dialog
-- `onSave`: Callback with route data when saved
+- `allStops`: Available bus stops
+- `onClose`: Callback to close dialog
+- `onSave`: Callback with route data
 
-**Steps**:
-1. **Basic Information**: Name, code, status, description
-2. **Operating Details**: Hours, frequency, vehicle type
-3. **Route Stops**: Interactive builder to add/reorder stops
-4. **Review**: Summary before saving
+## Sample Data
 
-**Features**:
-- Step validation
-- Add/remove/reorder stops
-- Automatic travel time calculation
-- Coordinate input for stop locations
-- Preview of route path
+The implementation includes sample routes for Bucharest:
+- 7 pre-configured routes
+- 10 bus stops across different zones
+- Realistic performance metrics
+- Operating schedules
 
-## Usage Examples
+## Technologies Used
 
-### Basic Usage
+- **React 19** with TypeScript
+- **Material-UI v7** for UI components
+- **Leaflet** with react-leaflet for mapping
+- **OpenStreetMap** tile layer
+
+## Usage
+
 ```tsx
-import { RoutesPage } from './RouteManagement';
+import RouteManagement from '@/pages/manager/RouteManagement';
 
-function App() {
-  const handleNotification = (message: string, severity: 'success' | 'error') => {
-    console.log(message);
-  };
-
-  return <RoutesPage showNotification={handleNotification} />;
-}
+<RouteManagement
+  showNotification={(message, severity) => {
+    // Handle notification display
+  }}
+/>
 ```
 
-### Using Individual Components
-```tsx
-import { RouteList, RouteDetailsPanel } from './RouteManagement';
+## Future Enhancements
 
-function MyRouteView() {
-  const [routes, setRoutes] = useState<RouteDetails[]>([]);
-  const [selectedRoute, setSelectedRoute] = useState<RouteDetails | null>(null);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-
-  return (
-    <>
-      <RouteList
-        routes={routes}
-        isLoading={false}
-        onViewDetails={(route) => {
-          setSelectedRoute(route);
-          setIsDetailsOpen(true);
-        }}
-        onEdit={(route) => console.log('Edit', route)}
-        onDelete={(id) => console.log('Delete', id)}
-        onToggleStatus={(id) => console.log('Toggle', id)}
-      />
-
-      <RouteDetailsPanel
-        route={selectedRoute}
-        open={isDetailsOpen}
-        onClose={() => setIsDetailsOpen(false)}
-        onEdit={(route) => console.log('Edit', route)}
-      />
-    </>
-  );
-}
-```
-
-## Sample Data Structure
-
-```typescript
-const sampleRoute: RouteDetails = {
-  id: 1,
-  name: 'Piața Victoriei - Piața Unirii',
-  code: 'Route 1',
-  description: 'Main route connecting central landmarks',
-  isActive: true,
-  operationalCost: 5000,
-  estimatedTravelTime: 25,
-  startPoint: 'Piața Victoriei',
-  endPoint: 'Piața Unirii',
-  numberOfStops: 4,
-  operatingHours: { start: '05:30', end: '23:00' },
-  status: 'active',
-  averageDailyPassengers: 3500,
-  onTimePercentage: 92,
-  capacityUtilization: 85,
-  frequency: 8,
-  vehicleType: 'Standard Bus',
-  stops: [
-    {
-      id: 1,
-      stopId: 101,
-      stopName: 'Piața Victoriei',
-      location: { latitude: 44.4518, longitude: 26.0828 },
-      sequenceNumber: 1,
-      averageWaitTime: 5,
-      boardingCount: 450,
-      alightingCount: 50,
-      distanceFromPrevious: 0,
-    },
-    // ... more stops
-  ],
-  path: [
-    [44.4518, 26.0828],
-    [44.4443, 26.0959],
-    // ... more coordinates
-  ],
-  busStops: [],
-  buses: [],
-};
-```
-
-## Customization
-
-### Changing Colors
-Update the color helper functions in each component:
-```typescript
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'active': return 'success';
-    case 'inactive': return 'default';
-    case 'maintenance': return 'warning';
-    default: return 'default';
-  }
-};
-```
-
-### Modifying Performance Thresholds
-```typescript
-const getPerformanceColor = (percentage: number) => {
-  if (percentage >= 90) return 'success'; // Change threshold here
-  if (percentage >= 75) return 'warning';
-  return 'error';
-};
-```
-
-### Adding New Filters
-Add to the `RouteListFilters` type in `types/index.ts`:
-```typescript
-export interface RouteListFilters {
-  status?: 'active' | 'inactive' | 'maintenance' | 'all';
-  searchTerm?: string;
-  sortBy?: 'name' | 'passengers' | 'performance' | 'stops';
-  sortOrder?: 'asc' | 'desc';
-  // Add new filters:
-  vehicleType?: string;
-  minPassengers?: number;
-}
-```
-
-## API Integration
-
-Replace sample data with real API calls:
-
-```typescript
-// In RoutesPage.tsx
-const loadRoutes = async () => {
-  setIsLoading(true);
-  try {
-    const response = await fetch('/api/routes');
-    const data = await response.json();
-    setRoutes(data);
-  } catch (error) {
-    console.error('Failed to load routes:', error);
-    showNotification('Failed to load routes', 'error');
-  } finally {
-    setIsLoading(false);
-  }
-};
-
-const handleSaveRoute = async (routeData: RouteDetails) => {
-  try {
-    const url = editingRoute
-      ? `/api/routes/${editingRoute.id}`
-      : '/api/routes';
-    const method = editingRoute ? 'PUT' : 'POST';
-
-    const response = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(routeData),
-    });
-
-    if (!response.ok) throw new Error('Failed to save route');
-
-    await loadRoutes(); // Refresh list
-    showNotification('Route saved successfully', 'success');
-  } catch (error) {
-    console.error('Failed to save route:', error);
-    showNotification('Failed to save route', 'error');
-  }
-};
-```
-
-## Performance Tips
-
-1. **Memoization**: Use `useMemo` for filtered/sorted data
-```tsx
-const filteredRoutes = useMemo(() =>
-  routes.filter(/* ... */),
-  [routes, filters]
-);
-```
-
-2. **Virtual Scrolling**: For large datasets, consider `react-window`
-```bash
-npm install react-window
-```
-
-3. **Debounced Search**: Implement debouncing for search input
-```tsx
-import { debounce } from 'lodash';
-
-const debouncedSearch = useMemo(
-  () => debounce((term) => setFilters({ ...filters, searchTerm: term }), 300),
-  []
-);
-```
-
-## Testing
-
-Example test for RouteList component:
-```tsx
-import { render, screen } from '@testing-library/react';
-import RouteList from './RouteList';
-
-test('renders route list with routes', () => {
-  const routes = [/* sample routes */];
-  render(
-    <RouteList
-      routes={routes}
-      isLoading={false}
-      onViewDetails={() => {}}
-      onEdit={() => {}}
-      onDelete={() => {}}
-      onToggleStatus={() => {}}
-    />
-  );
-
-  expect(screen.getByText('Route 1')).toBeInTheDocument();
-});
-```
-
-## Troubleshooting
-
-### Routes not displaying
-- Check that routes array is properly populated
-- Verify TypeScript types match the data structure
-- Check console for errors
-
-### Map not showing
-- Ensure RouteMapView component is rendered in the Map View tab
-- Check that routes have valid path coordinates
-- For full map functionality, install Leaflet
-
-### Form validation errors
-- Ensure all required fields are filled in each step
-- Check that coordinates are valid numbers
-- Verify that at least 2 stops are added before proceeding
-
-## Contributing
-
-When adding new features:
-1. Update type definitions in `types/index.ts`
-2. Add new props with proper TypeScript types
-3. Update this README with usage examples
-4. Add comments for complex logic
-5. Follow existing code style and conventions
+- Real-time bus tracking integration
+- Route optimization suggestions
+- Schedule/timetable editor
+- Historical performance analytics
+- Export routes to various formats
+- Import routes from external sources
+- Advanced traffic pattern analysis
+- Integration with AI recommendation engine

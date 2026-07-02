@@ -57,6 +57,18 @@ export interface BusRoute {
     busStops: BusStop[];
     buses: Bus[];
     path?: [number, number][];  // Array of [lat, lng] coordinates
+    status?: 'Active' | 'Inactive' | 'Under Maintenance';
+    startPoint?: string;
+    endPoint?: string;
+    operatingHours?: {
+        start: string;
+        end: string;
+    };
+    frequency?: number; // minutes between buses
+    vehicleType?: string;
+    averageDailyPassengers?: number;
+    onTimePerformance?: number; // percentage
+    capacityUtilization?: number; // percentage
 }
 
 export interface BusStop {
@@ -69,6 +81,16 @@ export interface BusStop {
     zoneType: string;
     isAccessible: boolean;
     isActive: boolean;
+    averageWaitTime?: number; // minutes
+    passengerBoardingStats?: {
+        dailyAverage: number;
+        peakHourAverage: number;
+    };
+    passengerAlightingStats?: {
+        dailyAverage: number;
+        peakHourAverage: number;
+    };
+    distanceToNext?: number; // meters
 }
 
 export interface Bus {
@@ -320,67 +342,18 @@ export interface NearbyStop {
 }
 
 // Route Management specific types
-export interface RouteStop {
-    id: number;
-    stopId: number;
-    stopName: string;
-    location: Location;
-    sequenceNumber: number;
-    averageWaitTime: number;
-    boardingCount: number;
-    alightingCount: number;
-    distanceFromPrevious: number;
+export interface RouteStop extends BusStop {
+    order: number;
+    scheduledArrivalOffset?: number; // minutes from route start
 }
 
-export interface RouteDetails extends BusRoute {
-    stops: RouteStop[];
-    startPoint: string;
-    endPoint: string;
-    numberOfStops: number;
-    operatingHours: {
-        start: string;
-        end: string;
-    };
-    status: 'active' | 'inactive' | 'maintenance';
-    averageDailyPassengers: number;
-    onTimePercentage: number;
-    capacityUtilization: number;
-    frequency: number; // minutes between buses
-    vehicleType: string;
-    estimatedTravelTime: number;
+export interface RouteSchedule {
+    dayOfWeek: string;
+    trips: TripSchedule[];
 }
 
-export interface RouteListFilters {
-    status?: 'active' | 'inactive' | 'maintenance' | 'all';
-    searchTerm?: string;
-    sortBy?: 'name' | 'passengers' | 'performance' | 'stops';
-    sortOrder?: 'asc' | 'desc';
-}
-
-export interface RouteFormData {
-    name: string;
-    code: string;
-    description: string;
-    startPoint: string;
-    endPoint: string;
-    operatingHours: {
-        start: string;
-        end: string;
-    };
-    frequency: number;
-    vehicleType: string;
-    stops: RouteStop[];
-    path: [number, number][];
-    isActive: boolean;
-}
-
-export interface BusPosition {
-    busId: number;
-    routeId: number;
-    location: Location;
-    heading: number;
-    speed: number;
-    lastUpdated: string;
-    status: 'on_time' | 'delayed' | 'ahead_of_schedule';
-    nextStopId: number;
+export interface TripSchedule {
+    departureTime: string;
+    arrivalTime: string;
+    vehicleId?: number;
 }

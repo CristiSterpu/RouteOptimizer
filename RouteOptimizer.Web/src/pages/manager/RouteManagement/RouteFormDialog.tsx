@@ -13,633 +13,539 @@ import {
     MenuItem,
     Box,
     Typography,
+    Chip,
     IconButton,
-    Paper,
-    List,
-    ListItem,
-    ListItemText,
-    ListItemSecondaryAction,
-    Stepper,
-    Step,
-    StepLabel,
-    Alert,
-    Divider,
+    Stack,
+    Autocomplete,
+    InputAdornment
 } from '@mui/material';
 import {
-    Close as CloseIcon,
-    Add as AddIcon,
-    Delete as DeleteIcon,
-    ArrowUpward as ArrowUpIcon,
-    ArrowDownward as ArrowDownIcon,
+    Close,
+    Add,
+    Delete,
+    Edit,
+    ArrowUpward,
+    ArrowDownward,
+    LocationOn,
+    Accessible,
+    DragIndicator
 } from '@mui/icons-material';
-import type { RouteDetails, RouteStop, Location } from '../../../types';
+import type { BusRoute, BusStop } from '@/types';
+import { generateRoutePath } from '@/utils/routing';
 
 interface RouteFormDialogProps {
     open: boolean;
-    route: RouteDetails | null;
+    route: BusRoute | null;
+    allStops: BusStop[];
     onClose: () => void;
-    onSave: (route: RouteDetails) => void;
+    onSave: (route: Partial<BusRoute>) => void;
 }
 
 const RouteFormDialog: React.FC<RouteFormDialogProps> = ({
     open,
     route,
+    allStops,
     onClose,
-    onSave,
+    onSave
 }) => {
-    const [activeStep, setActiveStep] = useState(0);
-    const [formData, setFormData] = useState<Partial<RouteDetails>>({
+    const [formData, setFormData] = useState<Partial<BusRoute>>({
         name: '',
         code: '',
         description: '',
+        status: 'Active',
         startPoint: '',
         endPoint: '',
         operatingHours: { start: '05:00', end: '23:00' },
         frequency: 10,
         vehicleType: 'Standard Bus',
-        isActive: true,
-        status: 'active',
-        numberOfStops: 0,
-        averageDailyPassengers: 0,
-        onTimePercentage: 100,
-        capacityUtilization: 0,
-        estimatedTravelTime: 0,
         operationalCost: 0,
-        stops: [],
-        path: [],
+        estimatedTravelTime: 0,
+        isActive: true,
         busStops: [],
-        buses: [],
-    });
-    const [newStop, setNewStop] = useState<Partial<RouteStop>>({
-        stopName: '',
-        location: { latitude: 44.4268, longitude: 26.1025 },
-        averageWaitTime: 5,
-        boardingCount: 0,
-        alightingCount: 0,
+        buses: []
     });
 
-    const steps = ['Basic Information', 'Operating Details', 'Route Stops', 'Review & Save'];
+    const [selectedStops, setSelectedStops] = useState<BusStop[]>([]);
 
     useEffect(() => {
         if (route) {
-            setFormData(route);
+            setFormData({
+                ...route,
+                operatingHours: route.operatingHours || { start: '05:00', end: '23:00' }
+            });
+            setSelectedStops(route.busStops || []);
         } else {
-            // Reset form for new route
             setFormData({
                 name: '',
                 code: '',
                 description: '',
+                status: 'Active',
                 startPoint: '',
                 endPoint: '',
                 operatingHours: { start: '05:00', end: '23:00' },
                 frequency: 10,
                 vehicleType: 'Standard Bus',
-                isActive: true,
-                status: 'active',
-                numberOfStops: 0,
-                averageDailyPassengers: 0,
-                onTimePercentage: 100,
-                capacityUtilization: 0,
-                estimatedTravelTime: 0,
                 operationalCost: 0,
-                stops: [],
-                path: [],
+                estimatedTravelTime: 0,
+                isActive: true,
                 busStops: [],
-                buses: [],
+                buses: []
             });
+            setSelectedStops([]);
         }
-        setActiveStep(0);
     }, [route, open]);
 
-    const handleNext = () => {
-        setActiveStep((prevStep) => prevStep + 1);
-    };
-
-    const handleBack = () => {
-        setActiveStep((prevStep) => prevStep - 1);
-    };
-
-    const handleInputChange = (field: string, value: unknown) => {
-        setFormData({ ...formData, [field]: value });
+    const handleChange = (field: string, value: any) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: value
+        }));
     };
 
     const handleOperatingHoursChange = (field: 'start' | 'end', value: string) => {
-        setFormData({
-            ...formData,
+        setFormData(prev => ({
+            ...prev,
             operatingHours: {
-                ...formData.operatingHours!,
-                [field]: value,
-            },
-        });
+                ...prev.operatingHours!,
+                [field]: value
+            }
+        }));
     };
 
-    const handleAddStop = () => {
-        if (!newStop.stopName) return;
+    const handleAddStop = (stop: BusStop | null) => {
+        if (stop && !selectedStops.find(s => s.id === stop.id)) {
+            setSelectedStops(prev => [...prev, stop]);
+        }
+    };
 
-        const stops = formData.stops || [];
-        const newStopData: RouteStop = {
-            id: stops.length + 1,
-            stopId: stops.length + 100,
-            stopName: newStop.stopName!,
-            location: newStop.location || { latitude: 44.4268, longitude: 26.1025 },
-            sequenceNumber: stops.length + 1,
-            averageWaitTime: newStop.averageWaitTime || 5,
-            boardingCount: newStop.boardingCount || 0,
-            alightingCount: newStop.alightingCount || 0,
-            distanceFromPrevious: stops.length > 0 ? 1000 : 0, // Default 1km
+    const handleRemoveStop = (stopId: number) => {
+        setSelectedStops(prev => prev.filter(s => s.id !== stopId));
+    };
+
+    const handleMoveStop = (index: number, direction: 'up' | 'down') => {
+        const newStops = [...selectedStops];
+        const targetIndex = direction === 'up' ? index - 1 : index + 1;
+
+        if (targetIndex >= 0 && targetIndex < newStops.length) {
+            [newStops[index], newStops[targetIndex]] = [newStops[targetIndex], newStops[index]];
+            setSelectedStops(newStops);
+        }
+    };
+
+    const handleSubmit = async () => {
+        const routeData: Partial<BusRoute> = {
+            ...formData,
+            busStops: selectedStops,
+            isActive: formData.status === 'Active'
         };
 
-        const updatedStops = [...stops, newStopData];
-        setFormData({
-            ...formData,
-            stops: updatedStops,
-            numberOfStops: updatedStops.length,
-            path: updatedStops.map(s => [s.location.latitude, s.location.longitude] as [number, number]),
-        });
+        if (selectedStops.length >= 2) {
+            routeData.startPoint = selectedStops[0].name;
+            routeData.endPoint = selectedStops[selectedStops.length - 1].name;
 
-        // Update start/end points
-        if (updatedStops.length === 1) {
-            setFormData(prev => ({ ...prev, startPoint: newStopData.stopName }));
+            // Generate street-following path
+            try {
+                const pathCoordinates = await generateRoutePath(selectedStops);
+                routeData.path = pathCoordinates;
+            } catch (error) {
+                console.error('Failed to generate route path:', error);
+                // Fallback to straight lines
+                const pathCoordinates: [number, number][] = selectedStops.map(stop => [
+                    stop.location.latitude,
+                    stop.location.longitude
+                ]);
+                routeData.path = pathCoordinates;
+            }
         }
-        setFormData(prev => ({ ...prev, endPoint: newStopData.stopName }));
-
-        // Reset new stop form
-        setNewStop({
-            stopName: '',
-            location: { latitude: 44.4268, longitude: 26.1025 },
-            averageWaitTime: 5,
-            boardingCount: 0,
-            alightingCount: 0,
-        });
-    };
-
-    const handleDeleteStop = (stopId: number) => {
-        const stops = formData.stops || [];
-        const updatedStops = stops
-            .filter(s => s.id !== stopId)
-            .map((s, index) => ({ ...s, sequenceNumber: index + 1 }));
-
-        setFormData({
-            ...formData,
-            stops: updatedStops,
-            numberOfStops: updatedStops.length,
-            path: updatedStops.map(s => [s.location.latitude, s.location.longitude] as [number, number]),
-            startPoint: updatedStops.length > 0 ? updatedStops[0].stopName : '',
-            endPoint: updatedStops.length > 0 ? updatedStops[updatedStops.length - 1].stopName : '',
-        });
-    };
-
-    const handleMoveStop = (stopId: number, direction: 'up' | 'down') => {
-        const stops = formData.stops || [];
-        const index = stops.findIndex(s => s.id === stopId);
-
-        if (
-            (direction === 'up' && index === 0) ||
-            (direction === 'down' && index === stops.length - 1)
-        ) {
-            return;
-        }
-
-        const newStops = [...stops];
-        const targetIndex = direction === 'up' ? index - 1 : index + 1;
-        [newStops[index], newStops[targetIndex]] = [newStops[targetIndex], newStops[index]];
-
-        // Update sequence numbers
-        const updatedStops = newStops.map((s, i) => ({ ...s, sequenceNumber: i + 1 }));
-
-        setFormData({
-            ...formData,
-            stops: updatedStops,
-            startPoint: updatedStops[0].stopName,
-            endPoint: updatedStops[updatedStops.length - 1].stopName,
-        });
-    };
-
-    const calculateEstimatedTime = () => {
-        const stops = formData.stops || [];
-        if (stops.length === 0) return 0;
-
-        const totalDistance = stops.reduce((sum, stop) => sum + stop.distanceFromPrevious, 0);
-        const avgSpeed = 25; // km/h in city traffic
-        const travelTime = (totalDistance / 1000) / avgSpeed * 60; // minutes
-        const stopTime = stops.length * 2; // 2 minutes per stop
-
-        return Math.round(travelTime + stopTime);
-    };
-
-    const handleSubmit = () => {
-        const estimatedTime = calculateEstimatedTime();
-        const routeData: RouteDetails = {
-            ...(route || {}),
-            ...formData,
-            estimatedTravelTime: estimatedTime,
-        } as RouteDetails;
 
         onSave(routeData);
+        onClose();
     };
 
-    const isStepValid = (step: number): boolean => {
-        switch (step) {
-            case 0:
-                return !!(formData.name && formData.code && formData.description);
-            case 1:
-                return !!(
-                    formData.operatingHours?.start &&
-                    formData.operatingHours?.end &&
-                    formData.frequency &&
-                    formData.vehicleType
-                );
-            case 2:
-                return (formData.stops?.length || 0) >= 2;
-            default:
-                return true;
-        }
-    };
-
-    const renderStepContent = (step: number) => {
-        switch (step) {
-            case 0:
-                return (
-                    <Grid container spacing={3}>
-                        <Grid item xs={12}>
-                            <TextField
-                                label="Route Name"
-                                fullWidth
-                                required
-                                value={formData.name}
-                                onChange={(e) => handleInputChange('name', e.target.value)}
-                                placeholder="e.g., Piața Victoriei - Piața Unirii"
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Route Code"
-                                fullWidth
-                                required
-                                value={formData.code}
-                                onChange={(e) => handleInputChange('code', e.target.value)}
-                                placeholder="e.g., Route 1"
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <FormControl fullWidth>
-                                <InputLabel>Status</InputLabel>
-                                <Select
-                                    value={formData.status}
-                                    onChange={(e) => handleInputChange('status', e.target.value)}
-                                    label="Status"
-                                >
-                                    <MenuItem value="active">Active</MenuItem>
-                                    <MenuItem value="inactive">Inactive</MenuItem>
-                                    <MenuItem value="maintenance">Under Maintenance</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12}>
-                            <TextField
-                                label="Description"
-                                fullWidth
-                                required
-                                multiline
-                                rows={3}
-                                value={formData.description}
-                                onChange={(e) => handleInputChange('description', e.target.value)}
-                                placeholder="Describe the route and its purpose"
-                            />
-                        </Grid>
-                    </Grid>
-                );
-            case 1:
-                return (
-                    <Grid container spacing={3}>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Start Time"
-                                type="time"
-                                fullWidth
-                                required
-                                value={formData.operatingHours?.start}
-                                onChange={(e) => handleOperatingHoursChange('start', e.target.value)}
-                                InputLabelProps={{ shrink: true }}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="End Time"
-                                type="time"
-                                fullWidth
-                                required
-                                value={formData.operatingHours?.end}
-                                onChange={(e) => handleOperatingHoursChange('end', e.target.value)}
-                                InputLabelProps={{ shrink: true }}
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField
-                                label="Frequency (minutes)"
-                                type="number"
-                                fullWidth
-                                required
-                                value={formData.frequency}
-                                onChange={(e) => handleInputChange('frequency', parseInt(e.target.value))}
-                                inputProps={{ min: 1, max: 60 }}
-                                helperText="How often buses run on this route"
-                            />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <FormControl fullWidth>
-                                <InputLabel>Vehicle Type</InputLabel>
-                                <Select
-                                    value={formData.vehicleType}
-                                    onChange={(e) => handleInputChange('vehicleType', e.target.value)}
-                                    label="Vehicle Type"
-                                >
-                                    <MenuItem value="Standard Bus">Standard Bus</MenuItem>
-                                    <MenuItem value="Express Bus">Express Bus</MenuItem>
-                                    <MenuItem value="Articulated Bus">Articulated Bus</MenuItem>
-                                    <MenuItem value="Mini Bus">Mini Bus</MenuItem>
-                                    <MenuItem value="Electric Bus">Electric Bus</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                        <Grid item xs={12}>
-                            <Alert severity="info">
-                                Based on your settings, buses will run every {formData.frequency} minutes
-                                from {formData.operatingHours?.start} to {formData.operatingHours?.end}.
-                            </Alert>
-                        </Grid>
-                    </Grid>
-                );
-            case 2:
-                return (
-                    <Box>
-                        <Typography variant="h6" gutterBottom>
-                            Add Route Stops
-                        </Typography>
-                        <Alert severity="info" sx={{ mb: 2 }}>
-                            Add at least 2 stops to create a route. The route will be drawn on the map
-                            connecting these stops in order.
-                        </Alert>
-
-                        {/* Add Stop Form */}
-                        <Paper variant="outlined" sx={{ p: 2, mb: 3 }}>
-                            <Grid container spacing={2} alignItems="center">
-                                <Grid item xs={12} sm={6}>
-                                    <TextField
-                                        label="Stop Name"
-                                        fullWidth
-                                        size="small"
-                                        value={newStop.stopName}
-                                        onChange={(e) => setNewStop({ ...newStop, stopName: e.target.value })}
-                                        placeholder="e.g., Piața Victoriei"
-                                    />
-                                </Grid>
-                                <Grid item xs={6} sm={2}>
-                                    <TextField
-                                        label="Latitude"
-                                        fullWidth
-                                        size="small"
-                                        type="number"
-                                        value={newStop.location?.latitude}
-                                        onChange={(e) =>
-                                            setNewStop({
-                                                ...newStop,
-                                                location: {
-                                                    ...newStop.location!,
-                                                    latitude: parseFloat(e.target.value),
-                                                },
-                                            })
-                                        }
-                                        inputProps={{ step: 0.0001 }}
-                                    />
-                                </Grid>
-                                <Grid item xs={6} sm={2}>
-                                    <TextField
-                                        label="Longitude"
-                                        fullWidth
-                                        size="small"
-                                        type="number"
-                                        value={newStop.location?.longitude}
-                                        onChange={(e) =>
-                                            setNewStop({
-                                                ...newStop,
-                                                location: {
-                                                    ...newStop.location!,
-                                                    longitude: parseFloat(e.target.value),
-                                                },
-                                            })
-                                        }
-                                        inputProps={{ step: 0.0001 }}
-                                    />
-                                </Grid>
-                                <Grid item xs={12} sm={2}>
-                                    <Button
-                                        variant="contained"
-                                        startIcon={<AddIcon />}
-                                        onClick={handleAddStop}
-                                        fullWidth
-                                        disabled={!newStop.stopName}
-                                    >
-                                        Add
-                                    </Button>
-                                </Grid>
-                            </Grid>
-                        </Paper>
-
-                        {/* Stops List */}
-                        <Typography variant="subtitle2" gutterBottom>
-                            Route Stops ({formData.stops?.length || 0})
-                        </Typography>
-                        {(formData.stops?.length || 0) === 0 ? (
-                            <Alert severity="warning">No stops added yet. Add at least 2 stops.</Alert>
-                        ) : (
-                            <List sx={{ bgcolor: 'background.paper', borderRadius: 1 }}>
-                                {formData.stops?.map((stop, index) => (
-                                    <React.Fragment key={stop.id}>
-                                        <ListItem>
-                                            <Box
-                                                sx={{
-                                                    width: 32,
-                                                    height: 32,
-                                                    borderRadius: '50%',
-                                                    bgcolor: 'primary.main',
-                                                    color: 'white',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontWeight: 'bold',
-                                                    mr: 2,
-                                                }}
-                                            >
-                                                {stop.sequenceNumber}
-                                            </Box>
-                                            <ListItemText
-                                                primary={stop.stopName}
-                                                secondary={`Lat: ${stop.location.latitude.toFixed(4)}, Lng: ${stop.location.longitude.toFixed(4)}`}
-                                            />
-                                            <ListItemSecondaryAction>
-                                                <IconButton
-                                                    edge="end"
-                                                    size="small"
-                                                    onClick={() => handleMoveStop(stop.id, 'up')}
-                                                    disabled={index === 0}
-                                                >
-                                                    <ArrowUpIcon />
-                                                </IconButton>
-                                                <IconButton
-                                                    edge="end"
-                                                    size="small"
-                                                    onClick={() => handleMoveStop(stop.id, 'down')}
-                                                    disabled={index === (formData.stops?.length || 0) - 1}
-                                                >
-                                                    <ArrowDownIcon />
-                                                </IconButton>
-                                                <IconButton
-                                                    edge="end"
-                                                    size="small"
-                                                    color="error"
-                                                    onClick={() => handleDeleteStop(stop.id)}
-                                                >
-                                                    <DeleteIcon />
-                                                </IconButton>
-                                            </ListItemSecondaryAction>
-                                        </ListItem>
-                                        {index < (formData.stops?.length || 0) - 1 && <Divider />}
-                                    </React.Fragment>
-                                ))}
-                            </List>
-                        )}
-                    </Box>
-                );
-            case 3:
-                const estimatedTime = calculateEstimatedTime();
-                return (
-                    <Box>
-                        <Typography variant="h6" gutterBottom>
-                            Review Route Information
-                        </Typography>
-                        <Grid container spacing={2}>
-                            <Grid item xs={12}>
-                                <Paper variant="outlined" sx={{ p: 2 }}>
-                                    <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                                        Route Details
-                                    </Typography>
-                                    <Typography variant="body2">
-                                        <strong>Name:</strong> {formData.name}
-                                    </Typography>
-                                    <Typography variant="body2">
-                                        <strong>Code:</strong> {formData.code}
-                                    </Typography>
-                                    <Typography variant="body2">
-                                        <strong>Status:</strong> {formData.status}
-                                    </Typography>
-                                    <Typography variant="body2">
-                                        <strong>Description:</strong> {formData.description}
-                                    </Typography>
-                                </Paper>
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <Paper variant="outlined" sx={{ p: 2 }}>
-                                    <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                                        Operating Hours
-                                    </Typography>
-                                    <Typography variant="body2">
-                                        {formData.operatingHours?.start} - {formData.operatingHours?.end}
-                                    </Typography>
-                                    <Typography variant="body2">
-                                        Frequency: Every {formData.frequency} minutes
-                                    </Typography>
-                                </Paper>
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <Paper variant="outlined" sx={{ p: 2 }}>
-                                    <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                                        Route Information
-                                    </Typography>
-                                    <Typography variant="body2">
-                                        Vehicle Type: {formData.vehicleType}
-                                    </Typography>
-                                    <Typography variant="body2">
-                                        Number of Stops: {formData.stops?.length || 0}
-                                    </Typography>
-                                    <Typography variant="body2">
-                                        Estimated Time: {estimatedTime} minutes
-                                    </Typography>
-                                </Paper>
-                            </Grid>
-                            <Grid item xs={12}>
-                                <Paper variant="outlined" sx={{ p: 2 }}>
-                                    <Typography variant="subtitle2" color="textSecondary" gutterBottom>
-                                        Route Path
-                                    </Typography>
-                                    <Typography variant="body2">
-                                        {formData.stops?.map(s => s.stopName).join(' → ')}
-                                    </Typography>
-                                </Paper>
-                            </Grid>
-                        </Grid>
-                    </Box>
-                );
-            default:
-                return null;
-        }
+    const isFormValid = () => {
+        return (
+            formData.name &&
+            formData.code &&
+            formData.description &&
+            selectedStops.length >= 2 &&
+            formData.frequency &&
+            formData.frequency > 0 &&
+            formData.estimatedTravelTime &&
+            formData.estimatedTravelTime > 0
+        );
     };
 
     return (
-        <Dialog
-            open={open}
-            onClose={onClose}
-            maxWidth="md"
-            fullWidth
-            PaperProps={{ sx: { minHeight: '600px' } }}
-        >
+        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
             <DialogTitle>
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Stack direction="row" justifyContent="space-between" alignItems="center">
                     <Typography variant="h6">
-                        {route ? 'Edit Route' : 'Create New Route'}
+                        {route ? 'Edit Route' : 'Add New Route'}
                     </Typography>
                     <IconButton onClick={onClose} size="small">
-                        <CloseIcon />
+                        <Close />
                     </IconButton>
-                </Box>
+                </Stack>
             </DialogTitle>
 
             <DialogContent dividers>
-                <Stepper activeStep={activeStep} sx={{ mb: 4 }}>
-                    {steps.map((label) => (
-                        <Step key={label}>
-                            <StepLabel>{label}</StepLabel>
-                        </Step>
-                    ))}
-                </Stepper>
+                <Grid container spacing={3}>
+                    <Grid item xs={12} md={6}>
+                        <TextField
+                            fullWidth
+                            label="Route Code"
+                            value={formData.code || ''}
+                            onChange={(e) => handleChange('code', e.target.value)}
+                            required
+                            placeholder="e.g., 133"
+                        />
+                    </Grid>
 
-                {renderStepContent(activeStep)}
+                    <Grid item xs={12} md={6}>
+                        <FormControl fullWidth required>
+                            <InputLabel>Status</InputLabel>
+                            <Select
+                                value={formData.status || 'Active'}
+                                label="Status"
+                                onChange={(e) => handleChange('status', e.target.value)}
+                            >
+                                <MenuItem value="Active">Active</MenuItem>
+                                <MenuItem value="Inactive">Inactive</MenuItem>
+                                <MenuItem value="Under Maintenance">Under Maintenance</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Grid>
+
+                    <Grid item xs={12}>
+                        <TextField
+                            fullWidth
+                            label="Route Name"
+                            value={formData.name || ''}
+                            onChange={(e) => handleChange('name', e.target.value)}
+                            required
+                            placeholder="e.g., Piața Victoriei - Piața Unirii"
+                        />
+                    </Grid>
+
+                    <Grid item xs={12}>
+                        <TextField
+                            fullWidth
+                            label="Description"
+                            value={formData.description || ''}
+                            onChange={(e) => handleChange('description', e.target.value)}
+                            required
+                            multiline
+                            rows={2}
+                            placeholder="Brief description of the route"
+                        />
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                        <TextField
+                            fullWidth
+                            label="Operating Hours - Start"
+                            type="time"
+                            value={formData.operatingHours?.start || '05:00'}
+                            onChange={(e) => handleOperatingHoursChange('start', e.target.value)}
+                            slotProps={{
+                                inputLabel: { shrink: true }
+                            }}
+                        />
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                        <TextField
+                            fullWidth
+                            label="Operating Hours - End"
+                            type="time"
+                            value={formData.operatingHours?.end || '23:00'}
+                            onChange={(e) => handleOperatingHoursChange('end', e.target.value)}
+                            slotProps={{
+                                inputLabel: { shrink: true }
+                            }}
+                        />
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                        <TextField
+                            fullWidth
+                            label="Frequency"
+                            type="number"
+                            value={formData.frequency || ''}
+                            onChange={(e) => handleChange('frequency', parseInt(e.target.value))}
+                            required
+                            slotProps={{
+                                input: {
+                                    endAdornment: <InputAdornment position="end">minutes</InputAdornment>
+                                }
+                            }}
+                        />
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                        <FormControl fullWidth>
+                            <InputLabel>Vehicle Type</InputLabel>
+                            <Select
+                                value={formData.vehicleType || 'Standard Bus'}
+                                label="Vehicle Type"
+                                onChange={(e) => handleChange('vehicleType', e.target.value)}
+                            >
+                                <MenuItem value="Standard Bus">Standard Bus</MenuItem>
+                                <MenuItem value="Articulated Bus">Articulated Bus</MenuItem>
+                                <MenuItem value="Minibus">Minibus</MenuItem>
+                                <MenuItem value="Electric Bus">Electric Bus</MenuItem>
+                                <MenuItem value="Double Decker">Double Decker</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                        <TextField
+                            fullWidth
+                            label="Estimated Travel Time"
+                            type="number"
+                            value={formData.estimatedTravelTime || ''}
+                            onChange={(e) => handleChange('estimatedTravelTime', parseInt(e.target.value))}
+                            required
+                            slotProps={{
+                                input: {
+                                    endAdornment: <InputAdornment position="end">minutes</InputAdornment>
+                                }
+                            }}
+                        />
+                    </Grid>
+
+                    <Grid item xs={12} md={6}>
+                        <TextField
+                            fullWidth
+                            label="Operational Cost"
+                            type="number"
+                            value={formData.operationalCost || ''}
+                            onChange={(e) => handleChange('operationalCost', parseFloat(e.target.value))}
+                            slotProps={{
+                                input: {
+                                    endAdornment: <InputAdornment position="end">LEI/day</InputAdornment>
+                                }
+                            }}
+                        />
+                    </Grid>
+
+                    <Grid item xs={12}>
+                        <Box sx={{
+                            p: 2,
+                            border: 2,
+                            borderColor: 'primary.main',
+                            borderRadius: 2,
+                            bgcolor: 'primary.50'
+                        }}>
+                            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 2 }}>
+                                <LocationOn color="primary" />
+                                <Typography variant="subtitle1" fontWeight="bold">
+                                    Route Stops
+                                </Typography>
+                                <Chip
+                                    label={`${selectedStops.length} stop${selectedStops.length !== 1 ? 's' : ''}`}
+                                    size="small"
+                                    color={selectedStops.length >= 2 ? 'success' : 'warning'}
+                                />
+                                {selectedStops.length < 2 && (
+                                    <Chip
+                                        label="Minimum 2 required"
+                                        size="small"
+                                        color="warning"
+                                        variant="outlined"
+                                    />
+                                )}
+                            </Stack>
+
+                            <Autocomplete
+                                options={allStops.filter(s => !selectedStops.find(ss => ss.id === s.id))}
+                                getOptionLabel={(option) => option.name}
+                                onChange={(_e, value) => handleAddStop(value)}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="Add Stop to Route"
+                                        placeholder="Search and select a stop..."
+                                        variant="outlined"
+                                    />
+                                )}
+                                renderOption={(props, option) => (
+                                    <li {...props} key={option.id}>
+                                        <Stack direction="row" spacing={1} alignItems="center" sx={{ width: '100%' }}>
+                                            <LocationOn fontSize="small" color="action" />
+                                            <Box sx={{ flexGrow: 1 }}>
+                                                <Typography variant="body2" fontWeight="medium">
+                                                    {option.name}
+                                                </Typography>
+                                                <Stack direction="row" spacing={1} alignItems="center">
+                                                    <Chip
+                                                        label={option.zoneType}
+                                                        size="small"
+                                                        variant="outlined"
+                                                        sx={{ fontSize: '0.65rem', height: 18 }}
+                                                    />
+                                                    {option.isAccessible && (
+                                                        <Accessible sx={{ fontSize: 14 }} color="primary" />
+                                                    )}
+                                                </Stack>
+                                            </Box>
+                                        </Stack>
+                                    </li>
+                                )}
+                            />
+
+                            <Box sx={{
+                                mt: 2,
+                                minHeight: '300px',
+                                maxHeight: '400px',
+                                overflow: 'auto',
+                                border: 2,
+                                borderStyle: selectedStops.length === 0 ? 'dashed' : 'solid',
+                                borderColor: selectedStops.length === 0 ? 'divider' : 'divider',
+                                borderRadius: 2,
+                                bgcolor: 'background.paper'
+                            }}>
+                                {selectedStops.length === 0 ? (
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            height: '300px',
+                                            px: 2
+                                        }}
+                                    >
+                                        <LocationOn sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
+                                        <Typography variant="body2" color="textSecondary" fontWeight="medium">
+                                            No stops added yet
+                                        </Typography>
+                                        <Typography variant="caption" color="textSecondary">
+                                            Search and add at least 2 stops to create a route
+                                        </Typography>
+                                    </Box>
+                                ) : (
+                                    <Stack spacing={0} divider={<Box sx={{ borderBottom: 1, borderColor: 'divider' }} />}>
+                                        {selectedStops.map((stop, index) => (
+                                            <Box
+                                                key={stop.id}
+                                                sx={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 1.5,
+                                                    p: 2,
+                                                    bgcolor: index === 0 || index === selectedStops.length - 1
+                                                        ? 'primary.50'
+                                                        : 'background.paper',
+                                                    '&:hover': {
+                                                        bgcolor: 'action.hover'
+                                                    },
+                                                    transition: 'background-color 0.2s'
+                                                }}
+                                            >
+                                                <DragIndicator sx={{ color: 'text.disabled', cursor: 'grab' }} />
+
+                                                <Chip
+                                                    label={index + 1}
+                                                    size="small"
+                                                    color={index === 0 ? 'success' : index === selectedStops.length - 1 ? 'error' : 'primary'}
+                                                    sx={{ minWidth: 32, fontWeight: 'bold' }}
+                                                />
+
+                                                <LocationOn
+                                                    color={index === 0 ? 'success' : index === selectedStops.length - 1 ? 'error' : 'primary'}
+                                                    fontSize="small"
+                                                />
+
+                                                <Box sx={{ flexGrow: 1 }}>
+                                                    <Stack direction="row" spacing={1} alignItems="center">
+                                                        <Typography variant="body2" fontWeight="medium">
+                                                            {stop.name}
+                                                        </Typography>
+                                                        {index === 0 && (
+                                                            <Chip label="Start" size="small" color="success" sx={{ height: 20, fontSize: '0.65rem' }} />
+                                                        )}
+                                                        {index === selectedStops.length - 1 && (
+                                                            <Chip label="End" size="small" color="error" sx={{ height: 20, fontSize: '0.65rem' }} />
+                                                        )}
+                                                        {stop.isAccessible && (
+                                                            <Accessible sx={{ fontSize: 16 }} color="primary" />
+                                                        )}
+                                                    </Stack>
+                                                    <Typography variant="caption" color="textSecondary">
+                                                        {stop.zoneType}
+                                                    </Typography>
+                                                </Box>
+
+                                                <Stack direction="row" spacing={0.5}>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleMoveStop(index, 'up')}
+                                                        disabled={index === 0}
+                                                        title="Move up"
+                                                        sx={{
+                                                            bgcolor: 'background.paper',
+                                                            border: 1,
+                                                            borderColor: 'divider',
+                                                            '&:hover': { bgcolor: 'action.hover' },
+                                                            '&.Mui-disabled': { bgcolor: 'action.disabledBackground' }
+                                                        }}
+                                                    >
+                                                        <ArrowUpward fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => handleMoveStop(index, 'down')}
+                                                        disabled={index === selectedStops.length - 1}
+                                                        title="Move down"
+                                                        sx={{
+                                                            bgcolor: 'background.paper',
+                                                            border: 1,
+                                                            borderColor: 'divider',
+                                                            '&:hover': { bgcolor: 'action.hover' },
+                                                            '&.Mui-disabled': { bgcolor: 'action.disabledBackground' }
+                                                        }}
+                                                    >
+                                                        <ArrowDownward fontSize="small" />
+                                                    </IconButton>
+                                                    <IconButton
+                                                        size="small"
+                                                        color="error"
+                                                        onClick={() => handleRemoveStop(stop.id)}
+                                                        title="Remove stop"
+                                                        sx={{
+                                                            bgcolor: 'background.paper',
+                                                            border: 1,
+                                                            borderColor: 'divider',
+                                                            '&:hover': { bgcolor: 'error.light', color: 'white' }
+                                                        }}
+                                                    >
+                                                        <Delete fontSize="small" />
+                                                    </IconButton>
+                                                </Stack>
+                                            </Box>
+                                        ))}
+                                    </Stack>
+                                )}
+                            </Box>
+                        </Box>
+                    </Grid>
+                </Grid>
             </DialogContent>
 
-            <DialogActions sx={{ justifyContent: 'space-between', px: 3, py: 2 }}>
-                <Button disabled={activeStep === 0} onClick={handleBack}>
-                    Back
+            <DialogActions>
+                <Button onClick={onClose}>
+                    Cancel
                 </Button>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                    <Button onClick={onClose}>Cancel</Button>
-                    {activeStep === steps.length - 1 ? (
-                        <Button
-                            variant="contained"
-                            onClick={handleSubmit}
-                            disabled={!isStepValid(activeStep)}
-                        >
-                            {route ? 'Update Route' : 'Create Route'}
-                        </Button>
-                    ) : (
-                        <Button
-                            variant="contained"
-                            onClick={handleNext}
-                            disabled={!isStepValid(activeStep)}
-                        >
-                            Next
-                        </Button>
-                    )}
-                </Box>
+                <Button
+                    onClick={handleSubmit}
+                    variant="contained"
+                    disabled={!isFormValid()}
+                    startIcon={route ? <Edit /> : <Add />}
+                >
+                    {route ? 'Update Route' : 'Create Route'}
+                </Button>
             </DialogActions>
         </Dialog>
     );

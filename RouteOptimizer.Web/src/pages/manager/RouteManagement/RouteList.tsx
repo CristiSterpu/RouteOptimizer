@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
 import {
+    Box,
+    Button,
+    Chip,
+    IconButton,
     Paper,
     Table,
     TableBody,
@@ -7,53 +11,88 @@ import {
     TableContainer,
     TableHead,
     TableRow,
-    TablePagination,
-    IconButton,
-    Chip,
-    Box,
     TextField,
-    InputAdornment,
+    Tooltip,
+    Typography,
     FormControl,
+    InputLabel,
     Select,
     MenuItem,
-    Tooltip,
-    CircularProgress,
-    Typography,
+    Stack,
+    TablePagination
 } from '@mui/material';
 import {
-    Visibility as VisibilityIcon,
-    Edit as EditIcon,
-    Delete as DeleteIcon,
-    PowerSettingsNew as PowerIcon,
-    Search as SearchIcon,
+    Delete,
+    Edit,
+    Visibility,
+    ToggleOn,
+    ToggleOff,
+    Add,
+    FilterList
 } from '@mui/icons-material';
-import type { RouteDetails, RouteListFilters } from '../../../types';
+import type { BusRoute } from '@/types';
 
 interface RouteListProps {
-    routes: RouteDetails[];
-    isLoading: boolean;
-    onViewDetails: (route: RouteDetails) => void;
-    onEdit: (route: RouteDetails) => void;
-    onDelete: (routeId: number) => void;
+    routes: BusRoute[];
+    onSelectRoute: (route: BusRoute) => void;
+    onEditRoute: (route: BusRoute) => void;
+    onDeleteRoute: (routeId: number) => void;
     onToggleStatus: (routeId: number) => void;
+    onAddRoute: () => void;
+    selectedRouteId?: number;
 }
 
 const RouteList: React.FC<RouteListProps> = ({
     routes,
-    isLoading,
-    onViewDetails,
-    onEdit,
-    onDelete,
+    onSelectRoute,
+    onEditRoute,
+    onDeleteRoute,
     onToggleStatus,
+    onAddRoute,
+    selectedRouteId
 }) => {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState<string>('all');
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
-    const [filters, setFilters] = useState<RouteListFilters>({
-        status: 'all',
-        searchTerm: '',
-        sortBy: 'name',
-        sortOrder: 'asc',
+
+    const getStatusColor = (status?: string) => {
+        switch (status) {
+            case 'Active':
+                return 'success';
+            case 'Inactive':
+                return 'default';
+            case 'Under Maintenance':
+                return 'warning';
+            default:
+                return 'default';
+        }
+    };
+
+    const getPerformanceColor = (value?: number) => {
+        if (!value) return 'inherit';
+        if (value >= 90) return 'success.main';
+        if (value >= 75) return 'warning.main';
+        return 'error.main';
+    };
+
+    const filteredRoutes = routes.filter(route => {
+        const matchesSearch =
+            route.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            route.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            route.description.toLowerCase().includes(searchTerm.toLowerCase());
+
+        const matchesStatus =
+            statusFilter === 'all' ||
+            route.status === statusFilter;
+
+        return matchesSearch && matchesStatus;
     });
+
+    const paginatedRoutes = filteredRoutes.slice(
+        page * rowsPerPage,
+        page * rowsPerPage + rowsPerPage
+    );
 
     const handleChangePage = (_event: unknown, newPage: number) => {
         setPage(newPage);
@@ -64,288 +103,215 @@ const RouteList: React.FC<RouteListProps> = ({
         setPage(0);
     };
 
-    const handleFilterChange = (key: keyof RouteListFilters, value: string) => {
-        setFilters({ ...filters, [key]: value });
-        setPage(0);
-    };
-
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'active':
-                return 'success';
-            case 'inactive':
-                return 'default';
-            case 'maintenance':
-                return 'warning';
-            default:
-                return 'default';
-        }
-    };
-
-    const getPerformanceColor = (percentage: number) => {
-        if (percentage >= 90) return 'success';
-        if (percentage >= 75) return 'warning';
-        return 'error';
-    };
-
-    const getUtilizationColor = (percentage: number) => {
-        if (percentage >= 80) return 'success';
-        if (percentage >= 60) return 'warning';
-        return 'error';
-    };
-
-    // Filter and sort routes
-    const filteredRoutes = routes
-        .filter(route => {
-            if (filters.status !== 'all' && route.status !== filters.status) {
-                return false;
-            }
-            if (filters.searchTerm) {
-                const searchLower = filters.searchTerm.toLowerCase();
-                return (
-                    route.name.toLowerCase().includes(searchLower) ||
-                    route.code.toLowerCase().includes(searchLower) ||
-                    route.startPoint.toLowerCase().includes(searchLower) ||
-                    route.endPoint.toLowerCase().includes(searchLower)
-                );
-            }
-            return true;
-        })
-        .sort((a, b) => {
-            const order = filters.sortOrder === 'asc' ? 1 : -1;
-            switch (filters.sortBy) {
-                case 'name':
-                    return order * a.name.localeCompare(b.name);
-                case 'passengers':
-                    return order * (a.averageDailyPassengers - b.averageDailyPassengers);
-                case 'performance':
-                    return order * (a.onTimePercentage - b.onTimePercentage);
-                case 'stops':
-                    return order * (a.numberOfStops - b.numberOfStops);
-                default:
-                    return 0;
-            }
-        });
-
-    const paginatedRoutes = filteredRoutes.slice(
-        page * rowsPerPage,
-        page * rowsPerPage + rowsPerPage
-    );
-
-    if (isLoading) {
-        return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
-                <CircularProgress size={60} />
-            </Box>
-        );
-    }
-
     return (
-        <Paper sx={{ width: '100%', mb: 2 }}>
-            {/* Filters */}
-            <Box sx={{ p: 2, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        <Box>
+            <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
+                <Typography variant="h5">
+                    Routes ({filteredRoutes.length})
+                </Typography>
+                <Button
+                    variant="contained"
+                    startIcon={<Add />}
+                    onClick={onAddRoute}
+                >
+                    Add Route
+                </Button>
+            </Box>
+
+            <Stack direction="row" spacing={2} sx={{ mb: 3 }}>
                 <TextField
                     placeholder="Search routes..."
-                    value={filters.searchTerm}
-                    onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                     size="small"
-                    sx={{ flexGrow: 1, minWidth: 200 }}
-                    InputProps={{
-                        startAdornment: (
-                            <InputAdornment position="start">
-                                <SearchIcon />
-                            </InputAdornment>
-                        ),
-                    }}
+                    sx={{ flexGrow: 1 }}
                 />
-                <FormControl size="small" sx={{ minWidth: 150 }}>
+                <FormControl size="small" sx={{ minWidth: 200 }}>
+                    <InputLabel>Status Filter</InputLabel>
                     <Select
-                        value={filters.status}
-                        onChange={(e) => handleFilterChange('status', e.target.value)}
-                        displayEmpty
+                        value={statusFilter}
+                        label="Status Filter"
+                        onChange={(e) => setStatusFilter(e.target.value)}
+                        startAdornment={<FilterList sx={{ mr: 1 }} />}
                     >
                         <MenuItem value="all">All Status</MenuItem>
-                        <MenuItem value="active">Active</MenuItem>
-                        <MenuItem value="inactive">Inactive</MenuItem>
-                        <MenuItem value="maintenance">Maintenance</MenuItem>
+                        <MenuItem value="Active">Active</MenuItem>
+                        <MenuItem value="Inactive">Inactive</MenuItem>
+                        <MenuItem value="Under Maintenance">Under Maintenance</MenuItem>
                     </Select>
                 </FormControl>
-                <FormControl size="small" sx={{ minWidth: 150 }}>
-                    <Select
-                        value={filters.sortBy}
-                        onChange={(e) => handleFilterChange('sortBy', e.target.value)}
-                    >
-                        <MenuItem value="name">Sort by Name</MenuItem>
-                        <MenuItem value="passengers">Sort by Passengers</MenuItem>
-                        <MenuItem value="performance">Sort by Performance</MenuItem>
-                        <MenuItem value="stops">Sort by Stops</MenuItem>
-                    </Select>
-                </FormControl>
-                <FormControl size="small" sx={{ minWidth: 120 }}>
-                    <Select
-                        value={filters.sortOrder}
-                        onChange={(e) => handleFilterChange('sortOrder', e.target.value)}
-                    >
-                        <MenuItem value="asc">Ascending</MenuItem>
-                        <MenuItem value="desc">Descending</MenuItem>
-                    </Select>
-                </FormControl>
-            </Box>
+            </Stack>
 
-            {/* Table */}
-            <TableContainer>
-                <Table sx={{ minWidth: 750 }} aria-labelledby="tableTitle" size="medium">
+            <TableContainer component={Paper}>
+                <Table>
                     <TableHead>
                         <TableRow>
-                            <TableCell>Route ID</TableCell>
+                            <TableCell>Route Code</TableCell>
                             <TableCell>Route Name</TableCell>
-                            <TableCell>Start - End</TableCell>
+                            <TableCell>Start/End Points</TableCell>
                             <TableCell align="center">Stops</TableCell>
                             <TableCell>Operating Hours</TableCell>
-                            <TableCell align="center">Status</TableCell>
-                            <TableCell align="right">Avg Daily Passengers</TableCell>
-                            <TableCell align="center">On-Time %</TableCell>
-                            <TableCell align="center">Capacity %</TableCell>
+                            <TableCell>Status</TableCell>
+                            <TableCell align="right">Daily Passengers</TableCell>
+                            <TableCell align="right">On-Time %</TableCell>
+                            <TableCell align="right">Capacity %</TableCell>
                             <TableCell align="center">Actions</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {paginatedRoutes.length === 0 ? (
+                        {paginatedRoutes.map((route) => (
+                            <TableRow
+                                key={route.id}
+                                hover
+                                selected={selectedRouteId === route.id}
+                                sx={{ cursor: 'pointer' }}
+                                onClick={() => onSelectRoute(route)}
+                            >
+                                <TableCell>
+                                    <Typography variant="body2" fontWeight="bold" color="primary">
+                                        {route.code}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell>
+                                    <Typography variant="body2" fontWeight="medium">
+                                        {route.name}
+                                    </Typography>
+                                    <Typography variant="caption" color="textSecondary">
+                                        {route.description}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell>
+                                    <Typography variant="body2">
+                                        {route.startPoint || 'N/A'}
+                                    </Typography>
+                                    <Typography variant="caption" color="textSecondary">
+                                        → {route.endPoint || 'N/A'}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell align="center">
+                                    <Chip
+                                        label={route.busStops?.length || 0}
+                                        size="small"
+                                        color="primary"
+                                        variant="outlined"
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <Typography variant="body2">
+                                        {route.operatingHours?.start || 'N/A'} - {route.operatingHours?.end || 'N/A'}
+                                    </Typography>
+                                    <Typography variant="caption" color="textSecondary">
+                                        Every {route.frequency || 'N/A'} min
+                                    </Typography>
+                                </TableCell>
+                                <TableCell>
+                                    <Chip
+                                        label={route.status || 'Unknown'}
+                                        color={getStatusColor(route.status)}
+                                        size="small"
+                                    />
+                                </TableCell>
+                                <TableCell align="right">
+                                    <Typography variant="body2">
+                                        {route.averageDailyPassengers?.toLocaleString() || 'N/A'}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell align="right">
+                                    <Typography
+                                        variant="body2"
+                                        fontWeight="bold"
+                                        color={getPerformanceColor(route.onTimePerformance)}
+                                    >
+                                        {route.onTimePerformance ? `${route.onTimePerformance}%` : 'N/A'}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell align="right">
+                                    <Typography
+                                        variant="body2"
+                                        fontWeight="bold"
+                                        color={getPerformanceColor(route.capacityUtilization)}
+                                    >
+                                        {route.capacityUtilization ? `${route.capacityUtilization}%` : 'N/A'}
+                                    </Typography>
+                                </TableCell>
+                                <TableCell align="center">
+                                    <Stack direction="row" spacing={0.5} justifyContent="center">
+                                        <Tooltip title="View Details">
+                                            <IconButton
+                                                size="small"
+                                                color="primary"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onSelectRoute(route);
+                                                }}
+                                            >
+                                                <Visibility fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
+                                        <Tooltip title="Edit Route">
+                                            <IconButton
+                                                size="small"
+                                                color="info"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onEditRoute(route);
+                                                }}
+                                            >
+                                                <Edit fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
+                                        <Tooltip title={route.isActive ? 'Disable Route' : 'Enable Route'}>
+                                            <IconButton
+                                                size="small"
+                                                color={route.isActive ? 'success' : 'default'}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    onToggleStatus(route.id);
+                                                }}
+                                            >
+                                                {route.isActive ? <ToggleOn fontSize="small" /> : <ToggleOff fontSize="small" />}
+                                            </IconButton>
+                                        </Tooltip>
+                                        <Tooltip title="Delete Route">
+                                            <IconButton
+                                                size="small"
+                                                color="error"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if (window.confirm(`Are you sure you want to delete route ${route.code}?`)) {
+                                                        onDeleteRoute(route.id);
+                                                    }
+                                                }}
+                                            >
+                                                <Delete fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
+                                    </Stack>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                        {paginatedRoutes.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={10} align="center">
-                                    <Typography variant="body1" color="textSecondary" sx={{ py: 4 }}>
+                                    <Typography variant="body2" color="textSecondary" sx={{ py: 3 }}>
                                         No routes found
                                     </Typography>
                                 </TableCell>
                             </TableRow>
-                        ) : (
-                            paginatedRoutes.map((route) => (
-                                <TableRow
-                                    hover
-                                    key={route.id}
-                                    sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
-                                >
-                                    <TableCell>
-                                        <Chip
-                                            label={route.code}
-                                            size="small"
-                                            color="primary"
-                                            variant="outlined"
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2" fontWeight="medium">
-                                            {route.name}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Box>
-                                            <Typography variant="body2" noWrap sx={{ maxWidth: 180 }}>
-                                                {route.startPoint}
-                                            </Typography>
-                                            <Typography variant="caption" color="textSecondary" noWrap sx={{ maxWidth: 180 }}>
-                                                → {route.endPoint}
-                                            </Typography>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        <Chip
-                                            label={route.numberOfStops}
-                                            size="small"
-                                            variant="outlined"
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2" noWrap>
-                                            {route.operatingHours.start} - {route.operatingHours.end}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        <Chip
-                                            label={route.status.charAt(0).toUpperCase() + route.status.slice(1)}
-                                            size="small"
-                                            color={getStatusColor(route.status)}
-                                        />
-                                    </TableCell>
-                                    <TableCell align="right">
-                                        <Typography variant="body2" fontWeight="medium">
-                                            {route.averageDailyPassengers.toLocaleString()}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        <Chip
-                                            label={`${route.onTimePercentage}%`}
-                                            size="small"
-                                            color={getPerformanceColor(route.onTimePercentage)}
-                                            variant="outlined"
-                                        />
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        <Chip
-                                            label={`${route.capacityUtilization}%`}
-                                            size="small"
-                                            color={getUtilizationColor(route.capacityUtilization)}
-                                            variant="outlined"
-                                        />
-                                    </TableCell>
-                                    <TableCell align="center">
-                                        <Box sx={{ display: 'flex', gap: 0.5 }}>
-                                            <Tooltip title="View Details">
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => onViewDetails(route)}
-                                                    color="primary"
-                                                >
-                                                    <VisibilityIcon fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title="Edit">
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => onEdit(route)}
-                                                    color="info"
-                                                >
-                                                    <EditIcon fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title={route.isActive ? "Disable" : "Enable"}>
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => onToggleStatus(route.id)}
-                                                    color={route.isActive ? "success" : "default"}
-                                                >
-                                                    <PowerIcon fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title="Delete">
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => onDelete(route.id)}
-                                                    color="error"
-                                                >
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                        </Box>
-                                    </TableCell>
-                                </TableRow>
-                            ))
                         )}
                     </TableBody>
                 </Table>
+                <TablePagination
+                    rowsPerPageOptions={[5, 10, 25, 50]}
+                    component="div"
+                    count={filteredRoutes.length}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                />
             </TableContainer>
-
-            {/* Pagination */}
-            <TablePagination
-                rowsPerPageOptions={[5, 10, 25]}
-                component="div"
-                count={filteredRoutes.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-            />
-        </Paper>
+        </Box>
     );
 };
 
